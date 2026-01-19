@@ -10,9 +10,7 @@
       background: #f5f5f5;
       padding: 15px;
     }
-    h1 {
-      text-align: center;
-    }
+    h1 { text-align: center; }
     .balance {
       background: #ffffff;
       border-radius: 10px;
@@ -21,47 +19,18 @@
       font-size: 24px;
       margin-bottom: 15px;
     }
-    .buttons {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 15px;
-    }
+    .buttons { display: flex; gap: 10px; margin-bottom: 15px; }
     button {
-      flex: 1;
-      padding: 15px;
-      font-size: 16px;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
+      flex: 1; padding: 15px; font-size: 16px; border: none;
+      border-radius: 10px; cursor: pointer;
     }
-    .income {
-      background: #4caf50;
-      color: white;
-    }
-    .expense {
-      background: #f44336;
-      color: white;
-    }
-    .history {
-      background: #ffffff;
-      border-radius: 10px;
-      padding: 10px;
-    }
-    .item {
-      display: flex;
-      justify-content: space-between;
-      border-bottom: 1px solid #ddd;
-      padding: 8px 0;
-    }
-    .item:last-child {
-      border-bottom: none;
-    }
-    .plus {
-      color: green;
-    }
-    .minus {
-      color: red;
-    }
+    .income { background: #4caf50; color: white; }
+    .expense { background: #f44336; color: white; }
+    .history { background: #ffffff; border-radius: 10px; padding: 10px; }
+    .item { display: flex; justify-content: space-between; border-bottom: 1px solid #ddd; padding: 8px 0; }
+    .item:last-child { border-bottom: none; }
+    .plus { color: green; }
+    .minus { color: red; }
   </style>
 </head>
 <body>
@@ -85,8 +54,14 @@
   const tg = window.Telegram.WebApp;
   tg.expand();
 
-  let balance = 0;
-  let operations = [];
+  // Загружаем данные из localStorage
+  let balance = parseFloat(localStorage.getItem('balance')) || 0;
+  let operations = JSON.parse(localStorage.getItem('operations')) || [];
+
+  function saveData() {
+    localStorage.setItem('balance', balance);
+    localStorage.setItem('operations', JSON.stringify(operations));
+  }
 
   function render() {
     document.getElementById("balance").innerText = balance.toFixed(2);
@@ -123,6 +98,7 @@
 
     balance += amount;
     operations.unshift({ type: 'income', amount: amount.toFixed(2) });
+    saveData();
     render();
   }
 
@@ -137,6 +113,7 @@
 
     balance -= amount;
     operations.unshift({ type: 'expense', amount: amount.toFixed(2) });
+    saveData();
     render();
   }
 
