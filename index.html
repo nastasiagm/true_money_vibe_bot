@@ -2,34 +2,145 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>Моё Mini App</title>
+  <title>Учёт баланса</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     body {
-      font-family: Arial;
+      font-family: Arial, sans-serif;
       background: #f5f5f5;
-      padding: 20px;
+      padding: 15px;
+    }
+    h1 {
+      text-align: center;
+    }
+    .balance {
+      background: #ffffff;
+      border-radius: 10px;
+      padding: 15px;
+      text-align: center;
+      font-size: 24px;
+      margin-bottom: 15px;
+    }
+    .buttons {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
     }
     button {
+      flex: 1;
       padding: 15px;
       font-size: 16px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    .income {
+      background: #4caf50;
+      color: white;
+    }
+    .expense {
+      background: #f44336;
+      color: white;
+    }
+    .history {
+      background: #ffffff;
+      border-radius: 10px;
+      padding: 10px;
+    }
+    .item {
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid #ddd;
+      padding: 8px 0;
+    }
+    .item:last-child {
+      border-bottom: none;
+    }
+    .plus {
+      color: green;
+    }
+    .minus {
+      color: red;
     }
   </style>
 </head>
 <body>
 
-<h2>Привет 👋</h2>
-<p>Это моё первое Telegram Mini App</p>
+<h1>Мой баланс</h1>
 
-<button onclick="sendData()">Отправить данные в бота</button>
+<div class="balance">
+  Баланс: <span id="balance">0</span> ₽
+</div>
+
+<div class="buttons">
+  <button class="income" onclick="addIncome()">Доход</button>
+  <button class="expense" onclick="addExpense()">Расход</button>
+</div>
+
+<div class="history" id="history">
+  <strong>История операций:</strong>
+</div>
 
 <script>
   const tg = window.Telegram.WebApp;
   tg.expand();
 
-  function sendData() {
-    tg.sendData("Привет от Mini App!");
+  let balance = 0;
+  let operations = [];
+
+  function render() {
+    document.getElementById("balance").innerText = balance.toFixed(2);
+
+    const historyDiv = document.getElementById("history");
+    historyDiv.innerHTML = '<strong>История операций:</strong>';
+
+    operations.forEach(op => {
+      const div = document.createElement("div");
+      div.className = "item";
+
+      const title = document.createElement("div");
+      title.innerText = op.type === 'income' ? 'Доход' : 'Расход';
+
+      const amount = document.createElement("div");
+      amount.innerText = (op.type === 'income' ? '+' : '-') + op.amount + ' ₽';
+      amount.className = op.type === 'income' ? 'plus' : 'minus';
+
+      div.appendChild(title);
+      div.appendChild(amount);
+
+      historyDiv.appendChild(div);
+    });
   }
+
+  function addIncome() {
+    const value = prompt("Введите сумму дохода:");
+    const amount = parseFloat(value);
+
+    if (isNaN(amount) || amount <= 0) {
+      alert("Введите корректную сумму");
+      return;
+    }
+
+    balance += amount;
+    operations.unshift({ type: 'income', amount: amount.toFixed(2) });
+    render();
+  }
+
+  function addExpense() {
+    const value = prompt("Введите сумму расхода:");
+    const amount = parseFloat(value);
+
+    if (isNaN(amount) || amount <= 0) {
+      alert("Введите корректную сумму");
+      return;
+    }
+
+    balance -= amount;
+    operations.unshift({ type: 'expense', amount: amount.toFixed(2) });
+    render();
+  }
+
+  render();
 </script>
 
 </body>
