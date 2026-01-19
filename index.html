@@ -6,157 +6,216 @@
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 15px; }
-    .balance { background: #ffffff; border-radius: 12px; padding: 15px; text-align: center; font-size: 26px; margin-bottom: 15px; }
-    .buttons { display: flex; gap: 10px; margin-bottom: 15px; }
-    button { flex: 1; padding: 15px; font-size: 16px; border: none; border-radius: 12px; cursor: pointer; }
-    .income { background: #4caf50; color: white; }
-    .expense { background: #f44336; color: white; }
-    .manage { background: #607d8b; color: white; margin-bottom: 15px; }
-    .history { background: #ffffff; border-radius: 12px; padding: 10px; }
-    .item { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding: 8px 0; }
-    .item:last-child { border-bottom: none; }
-    .left { display: flex; align-items: center; gap: 8px; }
-    .dot { width: 10px; height: 10px; border-radius: 50%; }
-    .plus { color: green; }
-    .minus { color: red; }
+    .top { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+    .menu { font-size:22px; cursor:pointer; }
+    .balance { background:#fff; border-radius:12px; padding:15px; text-align:center; font-size:26px; margin-bottom:15px; }
+    .buttons { display:flex; gap:10px; margin-bottom:15px; }
+    button { flex:1; padding:15px; font-size:16px; border:none; border-radius:12px; cursor:pointer; }
+    .income { background:#4caf50; color:white; }
+    .expense { background:#f44336; color:white; }
+    .history { background:#fff; border-radius:12px; padding:10px; }
+    .item { display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ddd; padding:8px 0; }
+    .item:last-child { border-bottom:none; }
+    .left { display:flex; flex-direction:column; }
+    .row { display:flex; align-items:center; gap:8px; }
+    .dot { width:10px; height:10px; border-radius:50%; }
+    .plus { color:green; }
+    .minus { color:red; }
+    .delete { cursor:pointer; color:#999; }
+    .overlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.4); display:none; justify-content:center; align-items:center; }
+    .modal { background:#fff; border-radius:12px; padding:15px; width:90%; max-width:400px; }
+    .cats { display:flex; flex-wrap:wrap; gap:8px; margin:10px 0; }
+    .cat { padding:8px 12px; border-radius:20px; color:white; cursor:pointer; }
+    input, textarea { width:100%; padding:10px; border-radius:8px; border:1px solid #ccc; margin-top:8px; }
   </style>
 </head>
 <body>
 
+<div class="top">
+  <div></div>
+  <div class="menu" onclick="openMenu()">⋮</div>
+</div>
+
 <div class="balance">Баланс: <span id="balance">0</span> ₽</div>
 
 <div class="buttons">
-  <button class="income" onclick="addIncome()">Доход</button>
-  <button class="expense" onclick="addExpense()">Расход</button>
+  <button class="income" onclick="openAdd('income')">Доход</button>
+  <button class="expense" onclick="openAdd('expense')">Расход</button>
 </div>
-
-<button class="manage" onclick="manageCategories()">Категории</button>
 
 <div class="history" id="history">
   <strong>История операций:</strong>
+</div>
+
+<div class="overlay" id="menuModal">
+  <div class="modal">
+    <button onclick="clearAll()">Удалить все данные</button>
+    <button onclick="closeMenu()">Отмена</button>
+  </div>
+</div>
+
+<div class="overlay" id="addModal">
+  <div class="modal">
+    <h3 id="addTitle"></h3>
+    <input id="amountInput" placeholder="Сумма" type="number" />
+    <textarea id="commentInput" placeholder="Комментарий (необязательно)"></textarea>
+    <div class="cats" id="cats"></div>
+    <button onclick="saveOperation()">Сохранить</button>
+    <button onclick="closeAdd()">Отмена</button>
+  </div>
 </div>
 
 <script>
   const tg = window.Telegram.WebApp;
   tg.expand();
 
-  // Базовые категории
-  const defaultCategories = {
-    'Еда': '#ff9800',
-    'Здоровье': '#e91e63',
-    'Дом': '#3f51b5'
-  };
+  const defaultExpenseCategories = { 'Еда':'#ff9800','Здоровье':'#e91e63','Дом':'#3f51b5' };
+  const defaultIncomeCategories = { 'Заработная плата':'#4caf50','Подарки':'#009688' };
 
   let balance = parseFloat(localStorage.getItem('balance')) || 0;
   let operations = JSON.parse(localStorage.getItem('operations')) || [];
-  let categories = JSON.parse(localStorage.getItem('categories')) || defaultCategories;
+  let expenseCategories = JSON.parse(localStorage.getItem('expenseCategories')) || defaultExpenseCategories;
+  let incomeCategories = JSON.parse(localStorage.getItem('incomeCategories')) || defaultIncomeCategories;
+
+  let currentType = null;
+  let currentCategory = null;
 
   function saveData() {
     localStorage.setItem('balance', balance);
     localStorage.setItem('operations', JSON.stringify(operations));
-    localStorage.setItem('categories', JSON.stringify(categories));
+    localStorage.setItem('expenseCategories', JSON.stringify(expenseCategories));
+    localStorage.setItem('incomeCategories', JSON.stringify(incomeCategories));
   }
 
   function render() {
-    document.getElementById("balance").innerText = balance.toFixed(2);
-
-    const historyDiv = document.getElementById("history");
+    document.getElementById('balance').innerText = balance.toFixed(2);
+    const historyDiv = document.getElementById('history');
     historyDiv.innerHTML = '<strong>История операций:</strong>';
 
-    operations.forEach(op => {
-      const div = document.createElement("div");
-      div.className = "item";
+    operations.forEach((op, index) => {
+      const div = document.createElement('div');
+      div.className = 'item';
 
-      const left = document.createElement("div");
+      const left = document.createElement('div');
       left.className = 'left';
 
-      const dot = document.createElement("div");
-      dot.className = 'dot';
-      dot.style.background = categories[op.category] || '#999';
+      const row = document.createElement('div');
+      row.className = 'row';
 
-      const title = document.createElement("div");
+      const dot = document.createElement('div');
+      dot.className = 'dot';
+      dot.style.background = op.color;
+
+      const title = document.createElement('div');
       title.innerText = op.category;
 
-      left.appendChild(dot);
-      left.appendChild(title);
+      row.appendChild(dot);
+      row.appendChild(title);
 
-      const amount = document.createElement("div");
-      amount.innerText = (op.type === 'income' ? '+' : '-') + op.amount + ' ₽';
-      amount.className = op.type === 'income' ? 'plus' : 'minus';
+      if (op.comment) {
+        const c = document.createElement('div');
+        c.style.fontSize = '12px';
+        c.style.color = '#666';
+        c.innerText = op.comment;
+        left.appendChild(row);
+        left.appendChild(c);
+      } else {
+        left.appendChild(row);
+      }
+
+      const amount = document.createElement('div');
+      amount.innerText = (op.type==='income'?'+':'-') + op.amount + ' ₽';
+      amount.className = op.type==='income'?'plus':'minus';
+
+      const del = document.createElement('div');
+      del.className = 'delete';
+      del.innerText = '✕';
+      del.onclick = () => deleteOperation(index);
 
       div.appendChild(left);
       div.appendChild(amount);
+      div.appendChild(del);
 
       historyDiv.appendChild(div);
     });
   }
 
-  function chooseCategory() {
-    const names = Object.keys(categories);
-    const list = names.map((c, i) => `${i + 1}. ${c}`).join('\n');
-    const choice = prompt(`Выбери категорию:\n${list}\n\nИли введи новое название:`);
+  function openAdd(type) {
+    currentType = type;
+    currentCategory = null;
+    document.getElementById('addTitle').innerText = type==='income'?'Добавить доход':'Добавить расход';
+    document.getElementById('amountInput').value = '';
+    document.getElementById('commentInput').value = '';
 
-    if (!choice) return null;
+    const catsDiv = document.getElementById('cats');
+    catsDiv.innerHTML = '';
 
-    const index = parseInt(choice) - 1;
-    if (!isNaN(index) && names[index]) {
-      return names[index];
-    }
+    const cats = type==='income'?incomeCategories:expenseCategories;
+    Object.keys(cats).forEach(name => {
+      const div = document.createElement('div');
+      div.className = 'cat';
+      div.style.background = cats[name];
+      div.innerText = name;
+      div.onclick = () => { currentCategory = {name, color:cats[name]}; highlight(div); };
+      catsDiv.appendChild(div);
+    });
 
-    // Новая категория
-    const color = prompt('Введи цвет для категории (например: #9c27b0):', '#9c27b0');
-    categories[choice] = color || '#999';
-    saveData();
-    return choice;
+    document.getElementById('addModal').style.display = 'flex';
   }
 
-  function addIncome() {
-    const value = prompt("Введите сумму дохода:");
-    const amount = parseFloat(value);
-    if (isNaN(amount) || amount <= 0) { alert("Введите корректную сумму"); return; }
+  function highlight(selected) {
+    document.querySelectorAll('.cat').forEach(c => c.style.opacity = '0.5');
+    selected.style.opacity = '1';
+  }
 
-    const category = chooseCategory();
-    if (!category) return;
+  function saveOperation() {
+    const amount = parseFloat(document.getElementById('amountInput').value);
+    const comment = document.getElementById('commentInput').value.trim();
 
-    balance += amount;
-    operations.unshift({ type: 'income', amount: amount.toFixed(2), category });
+    if (isNaN(amount) || amount<=0) { alert('Введите корректную сумму'); return; }
+    if (!currentCategory) { alert('Выберите категорию'); return; }
+
+    if (currentType==='income') balance += amount; else balance -= amount;
+
+    operations.unshift({
+      type: currentType,
+      amount: amount.toFixed(2),
+      category: currentCategory.name,
+      color: currentCategory.color,
+      comment
+    });
+
+    saveData();
+    closeAdd();
+    render();
+  }
+
+  function closeAdd() {
+    document.getElementById('addModal').style.display = 'none';
+  }
+
+  function deleteOperation(index) {
+    const op = operations[index];
+    if (op.type==='income') balance -= parseFloat(op.amount); else balance += parseFloat(op.amount);
+    operations.splice(index,1);
     saveData();
     render();
   }
 
-  function addExpense() {
-    const value = prompt("Введите сумму расхода:");
-    const amount = parseFloat(value);
-    if (isNaN(amount) || amount <= 0) { alert("Введите корректную сумму"); return; }
-
-    const category = chooseCategory();
-    if (!category) return;
-
-    balance -= amount;
-    operations.unshift({ type: 'expense', amount: amount.toFixed(2), category });
-    saveData();
-    render();
+  function openMenu() {
+    document.getElementById('menuModal').style.display = 'flex';
   }
 
-  function manageCategories() {
-    const names = Object.keys(categories);
-    const list = names.map((c, i) => `${i + 1}. ${c} (${categories[c]})`).join('\n');
+  function closeMenu() {
+    document.getElementById('menuModal').style.display = 'none';
+  }
 
-    const choice = prompt(`Категории:\n${list}\n\nВведи номер для изменения или новое имя:`);
-    if (!choice) return;
-
-    const index = parseInt(choice) - 1;
-    let name;
-
-    if (!isNaN(index) && names[index]) {
-      name = names[index];
-    } else {
-      name = choice;
-    }
-
-    const color = prompt('Новый цвет для категории:', categories[name] || '#999');
-    categories[name] = color || '#999';
+  function clearAll() {
+    if (!confirm('Точно удалить все данные?')) return;
+    balance = 0;
+    operations = [];
     saveData();
+    closeMenu();
     render();
   }
 
@@ -164,4 +223,3 @@
 </script>
 
 </body>
-</html>
