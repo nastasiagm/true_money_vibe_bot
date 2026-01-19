@@ -2,49 +2,35 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>Учёт баланса</title>
+  <title>True Money</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f5f5f5;
-      padding: 15px;
-    }
-    h1 { text-align: center; }
-    .balance {
-      background: #ffffff;
-      border-radius: 10px;
-      padding: 15px;
-      text-align: center;
-      font-size: 24px;
-      margin-bottom: 15px;
-    }
+    body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 15px; }
+    .balance { background: #ffffff; border-radius: 12px; padding: 15px; text-align: center; font-size: 26px; margin-bottom: 15px; }
     .buttons { display: flex; gap: 10px; margin-bottom: 15px; }
-    button {
-      flex: 1; padding: 15px; font-size: 16px; border: none;
-      border-radius: 10px; cursor: pointer;
-    }
+    button { flex: 1; padding: 15px; font-size: 16px; border: none; border-radius: 12px; cursor: pointer; }
     .income { background: #4caf50; color: white; }
     .expense { background: #f44336; color: white; }
-    .history { background: #ffffff; border-radius: 10px; padding: 10px; }
-    .item { display: flex; justify-content: space-between; border-bottom: 1px solid #ddd; padding: 8px 0; }
+    .manage { background: #607d8b; color: white; margin-bottom: 15px; }
+    .history { background: #ffffff; border-radius: 12px; padding: 10px; }
+    .item { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding: 8px 0; }
     .item:last-child { border-bottom: none; }
+    .left { display: flex; align-items: center; gap: 8px; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
     .plus { color: green; }
     .minus { color: red; }
   </style>
 </head>
 <body>
 
-<h1>Мой баланс</h1>
-
-<div class="balance">
-  Баланс: <span id="balance">0</span> ₽
-</div>
+<div class="balance">Баланс: <span id="balance">0</span> ₽</div>
 
 <div class="buttons">
   <button class="income" onclick="addIncome()">Доход</button>
   <button class="expense" onclick="addExpense()">Расход</button>
 </div>
+
+<button class="manage" onclick="manageCategories()">Категории</button>
 
 <div class="history" id="history">
   <strong>История операций:</strong>
@@ -54,13 +40,21 @@
   const tg = window.Telegram.WebApp;
   tg.expand();
 
-  // Загружаем данные из localStorage
+  // Базовые категории
+  const defaultCategories = {
+    'Еда': '#ff9800',
+    'Здоровье': '#e91e63',
+    'Дом': '#3f51b5'
+  };
+
   let balance = parseFloat(localStorage.getItem('balance')) || 0;
   let operations = JSON.parse(localStorage.getItem('operations')) || [];
+  let categories = JSON.parse(localStorage.getItem('categories')) || defaultCategories;
 
   function saveData() {
     localStorage.setItem('balance', balance);
     localStorage.setItem('operations', JSON.stringify(operations));
+    localStorage.setItem('categories', JSON.stringify(categories));
   }
 
   function render() {
@@ -73,31 +67,59 @@
       const div = document.createElement("div");
       div.className = "item";
 
+      const left = document.createElement("div");
+      left.className = 'left';
+
+      const dot = document.createElement("div");
+      dot.className = 'dot';
+      dot.style.background = categories[op.category] || '#999';
+
       const title = document.createElement("div");
-      title.innerText = op.type === 'income' ? 'Доход' : 'Расход';
+      title.innerText = op.category;
+
+      left.appendChild(dot);
+      left.appendChild(title);
 
       const amount = document.createElement("div");
       amount.innerText = (op.type === 'income' ? '+' : '-') + op.amount + ' ₽';
       amount.className = op.type === 'income' ? 'plus' : 'minus';
 
-      div.appendChild(title);
+      div.appendChild(left);
       div.appendChild(amount);
 
       historyDiv.appendChild(div);
     });
   }
 
+  function chooseCategory() {
+    const names = Object.keys(categories);
+    const list = names.map((c, i) => `${i + 1}. ${c}`).join('\n');
+    const choice = prompt(`Выбери категорию:\n${list}\n\nИли введи новое название:`);
+
+    if (!choice) return null;
+
+    const index = parseInt(choice) - 1;
+    if (!isNaN(index) && names[index]) {
+      return names[index];
+    }
+
+    // Новая категория
+    const color = prompt('Введи цвет для категории (например: #9c27b0):', '#9c27b0');
+    categories[choice] = color || '#999';
+    saveData();
+    return choice;
+  }
+
   function addIncome() {
     const value = prompt("Введите сумму дохода:");
     const amount = parseFloat(value);
+    if (isNaN(amount) || amount <= 0) { alert("Введите корректную сумму"); return; }
 
-    if (isNaN(amount) || amount <= 0) {
-      alert("Введите корректную сумму");
-      return;
-    }
+    const category = chooseCategory();
+    if (!category) return;
 
     balance += amount;
-    operations.unshift({ type: 'income', amount: amount.toFixed(2) });
+    operations.unshift({ type: 'income', amount: amount.toFixed(2), category });
     saveData();
     render();
   }
@@ -105,14 +127,35 @@
   function addExpense() {
     const value = prompt("Введите сумму расхода:");
     const amount = parseFloat(value);
+    if (isNaN(amount) || amount <= 0) { alert("Введите корректную сумму"); return; }
 
-    if (isNaN(amount) || amount <= 0) {
-      alert("Введите корректную сумму");
-      return;
-    }
+    const category = chooseCategory();
+    if (!category) return;
 
     balance -= amount;
-    operations.unshift({ type: 'expense', amount: amount.toFixed(2) });
+    operations.unshift({ type: 'expense', amount: amount.toFixed(2), category });
+    saveData();
+    render();
+  }
+
+  function manageCategories() {
+    const names = Object.keys(categories);
+    const list = names.map((c, i) => `${i + 1}. ${c} (${categories[c]})`).join('\n');
+
+    const choice = prompt(`Категории:\n${list}\n\nВведи номер для изменения или новое имя:`);
+    if (!choice) return;
+
+    const index = parseInt(choice) - 1;
+    let name;
+
+    if (!isNaN(index) && names[index]) {
+      name = names[index];
+    } else {
+      name = choice;
+    }
+
+    const color = prompt('Новый цвет для категории:', categories[name] || '#999');
+    categories[name] = color || '#999';
     saveData();
     render();
   }
