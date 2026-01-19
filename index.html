@@ -1,267 +1,150 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>True Money</title>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <style>
-    body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 15px; }
-    .top { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
-    .menu { font-size:22px; cursor:pointer; }
-    .balance { background:#fff; border-radius:12px; padding:15px; text-align:center; font-size:26px; margin-bottom:15px; }
-    .buttons { display:flex; gap:10px; margin-bottom:15px; }
-    button { padding:12px; font-size:14px; border:none; border-radius:10px; cursor:pointer; }
-    .income { background:#4caf50; color:white; flex:1; }
-    .expense { background:#f44336; color:white; flex:1; }
-    .history { background:#fff; border-radius:12px; padding:10px; }
-    .item { display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ddd; padding:8px 0; }
-    .item:last-child { border-bottom:none; }
-    .left { display:flex; flex-direction:column; }
-    .row { display:flex; align-items:center; gap:8px; }
-    .dot { width:10px; height:10px; border-radius:50%; }
-    .plus { color:green; }
-    .minus { color:red; }
-    .delete { cursor:pointer; color:#999; }
-    .overlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.4); display:none; justify-content:center; align-items:center; }
-    .modal { background:#fff; border-radius:12px; padding:15px; width:90%; max-width:420px; }
-    .cats { display:flex; flex-wrap:wrap; gap:8px; margin:10px 0; }
-    .cat { padding:8px 12px; border-radius:20px; color:white; cursor:pointer; }
-    input, textarea { width:100%; padding:10px; border-radius:8px; border:1px solid #ccc; margin-top:8px; }
-    .cat-row { display:flex; align-items:center; justify-content:space-between; margin:6px 0; }
-    .cat-left { display:flex; align-items:center; gap:8px; }
-    .edit, .trash { cursor:pointer; margin-left:6px; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>True Money</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{
+--bg:#f6f7f9;--card:#ffffff;--text:#1f2933;--muted:#6b7280;
+--income:#7fb69c;--expense:#e3a6a1;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{
+margin:0;padding:14px;
+font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,Helvetica,Arial,sans-serif;
+background:var(--bg);color:var(--text)
+}
+.top{display:flex;justify-content:flex-end;margin-bottom:10px}
+.menu{font-size:22px;color:var(--muted)}
+.balance{
+background:var(--card);border-radius:16px;padding:18px;
+text-align:center;font-size:28px;font-weight:600;margin-bottom:16px;
+box-shadow:0 4px 14px rgba(0,0,0,.04)
+}
+.buttons{display:flex;gap:12px;margin-bottom:16px}
+button{
+padding:14px;font-size:15px;border:none;border-radius:14px;
+width:100%;font-weight:500
+}
+.income{background:var(--income);color:#fff}
+.expense{background:var(--expense);color:#fff}
+.history{
+background:var(--card);border-radius:16px;padding:12px;
+box-shadow:0 4px 14px rgba(0,0,0,.04)
+}
+.item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #ececec}
+.item:last-child{border-bottom:none}
+.row{display:flex;align-items:center;gap:8px}
+.dot{width:10px;height:10px;border-radius:50%}
+.plus{color:#3f8f6b}.minus{color:#b25550}
+.delete{color:#bbb;font-size:18px;padding-left:10px}
+.overlay{
+position:fixed;inset:0;background:rgba(0,0,0,.35);
+display:none;justify-content:center;align-items:center;z-index:10
+}
+.modal{
+background:var(--card);border-radius:18px;padding:16px;width:92%;max-width:420px
+}
+input,textarea{
+width:100%;padding:12px;border-radius:12px;border:1px solid #ddd;
+margin-top:10px;font-size:15px;font-family:inherit
+}
+.cats{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.cat{padding:8px 14px;border-radius:20px;color:#fff;font-size:13px;opacity:.6}
+.cat.active{opacity:1}
+</style>
 </head>
 <body>
 
-<div class="top">
-  <div></div>
-  <div class="menu" onclick="openMenu()">⋮</div>
-</div>
-
+<div class="top"><div class="menu" onclick="openMenu()">⋮</div></div>
 <div class="balance">Баланс: <span id="balance">0</span> ₽</div>
 
 <div class="buttons">
-  <button class="income" onclick="openAdd('income')">Доход</button>
-  <button class="expense" onclick="openAdd('expense')">Расход</button>
+<button class="income" onclick="openAdd('income')">Доход</button>
+<button class="expense" onclick="openAdd('expense')">Расход</button>
 </div>
 
-<div class="history" id="history">
-  <strong>История операций:</strong>
-</div>
+<div class="history" id="history"><strong>История операций</strong></div>
 
-<!-- Меню ⋮ -->
 <div class="overlay" id="menuModal">
-  <div class="modal">
-    <button onclick="openCategories()">Категории</button>
-    <button onclick="clearAll()">Удалить все данные</button>
-    <button onclick="closeMenu()">Отмена</button>
-  </div>
+<div class="modal">
+<button onclick="clearAll()">Удалить все данные</button>
+<button onclick="closeMenu()">Отмена</button>
+</div>
 </div>
 
-<!-- Управление категориями -->
-<div class="overlay" id="categoriesModal">
-  <div class="modal">
-    <h3>Категории</h3>
-    <div>
-      <button onclick="setCatType('expense')">Расходы</button>
-      <button onclick="setCatType('income')">Доходы</button>
-    </div>
-    <div id="categoriesList"></div>
-    <button onclick="openCategoryForm()">+ Добавить категорию</button>
-    <button onclick="closeCategories()">Закрыть</button>
-  </div>
-</div>
-
-<!-- Форма категории -->
-<div class="overlay" id="categoryFormModal">
-  <div class="modal">
-    <h3 id="catFormTitle"></h3>
-    <input id="catNameInput" placeholder="Название категории" />
-    <input id="catColorInput" type="color" />
-    <button onclick="saveCategory()">Сохранить</button>
-    <button onclick="closeCategoryForm()">Отмена</button>
-  </div>
-</div>
-
-<!-- Добавление операции -->
 <div class="overlay" id="addModal">
-  <div class="modal">
-    <h3 id="addTitle"></h3>
-    <input id="amountInput" placeholder="Сумма" type="number" />
-    <textarea id="commentInput" placeholder="Комментарий (необязательно)"></textarea>
-    <div class="cats" id="cats"></div>
-    <button onclick="saveOperation()">Сохранить</button>
-    <button onclick="closeAdd()">Отмена</button>
-  </div>
+<div class="modal">
+<h3 id="addTitle"></h3>
+<input id="amountInput" type="number" placeholder="Сумма">
+<textarea id="commentInput" placeholder="Комментарий (необязательно)"></textarea>
+<div class="cats" id="cats"></div>
+<button onclick="saveOperation()">Сохранить</button>
+<button onclick="closeAdd()">Отмена</button>
+</div>
 </div>
 
 <script>
-const tg = window.Telegram.WebApp; tg.expand();
+const expenseCategories={'Еда':'#f0b8b4','Здоровье':'#e7b0c9','Дом':'#b8c6e6'};
+const incomeCategories={'Заработная плата':'#9ac7b3','Подарки':'#8fc4d6'};
+let balance=parseFloat(localStorage.getItem('balance'))||0;
+let operations=JSON.parse(localStorage.getItem('operations'))||[];
+let currentType=null,currentCategory=null;
 
-const defaultExpenseCategories = { 'Еда':'#ff9800','Здоровье':'#e91e63','Дом':'#3f51b5' };
-const defaultIncomeCategories = { 'Заработная плата':'#4caf50','Подарки':'#009688' };
+function save(){localStorage.setItem('balance',balance);localStorage.setItem('operations',JSON.stringify(operations))}
 
-let balance = parseFloat(localStorage.getItem('balance')) || 0;
-let operations = JSON.parse(localStorage.getItem('operations')) || [];
-let expenseCategories = JSON.parse(localStorage.getItem('expenseCategories')) || defaultExpenseCategories;
-let incomeCategories = JSON.parse(localStorage.getItem('incomeCategories')) || defaultIncomeCategories;
-
-let currentType = null;
-let currentCategory = null;
-let currentCatType = 'expense';
-let editingCategoryName = null;
-
-function saveData() {
-  localStorage.setItem('balance', balance);
-  localStorage.setItem('operations', JSON.stringify(operations));
-  localStorage.setItem('expenseCategories', JSON.stringify(expenseCategories));
-  localStorage.setItem('incomeCategories', JSON.stringify(incomeCategories));
+function render(){
+document.getElementById('balance').innerText=balance.toFixed(2);
+const h=document.getElementById('history');
+h.innerHTML='<strong>История операций</strong>';
+operations.forEach((o,i)=>{
+const d=document.createElement('div');d.className='item';
+d.innerHTML=`<div class="row"><div class="dot" style="background:${o.color}"></div>${o.category}</div>
+<div class="${o.type==='income'?'plus':'minus'}">${o.type==='income'?'+':'-'}${o.amount} ₽</div>
+<div class="delete" onclick="del(${i})">✕</div>`;
+h.appendChild(d);
+})
 }
 
-function render() {
-  document.getElementById('balance').innerText = balance.toFixed(2);
-  const historyDiv = document.getElementById('history');
-  historyDiv.innerHTML = '<strong>История операций:</strong>';
-
-  operations.forEach((op, index) => {
-    const div = document.createElement('div'); div.className = 'item';
-    const left = document.createElement('div'); left.className = 'left';
-    const row = document.createElement('div'); row.className = 'row';
-
-    const dot = document.createElement('div'); dot.className = 'dot';
-    dot.style.background = op.color || '#999';
-
-    const title = document.createElement('div');
-    title.innerText = op.category || '(удалена)';
-
-    row.appendChild(dot); row.appendChild(title);
-
-    if (op.comment) {
-      const c = document.createElement('div'); c.style.fontSize='12px'; c.style.color='#666'; c.innerText = op.comment;
-      left.appendChild(row); left.appendChild(c);
-    } else left.appendChild(row);
-
-    const amount = document.createElement('div');
-    amount.innerText = (op.type==='income'?'+':'-') + op.amount + ' ₽';
-    amount.className = op.type==='income'?'plus':'minus';
-
-    const del = document.createElement('div'); del.className='delete'; del.innerText='✕'; del.onclick=()=>deleteOperation(index);
-
-    div.appendChild(left); div.appendChild(amount); div.appendChild(del);
-    historyDiv.appendChild(div);
-  });
+function openAdd(t){
+currentType=t;currentCategory=null;
+document.getElementById('addTitle').innerText=t==='income'?'Добавить доход':'Добавить расход';
+const c=document.getElementById('cats');c.innerHTML='';
+const src=t==='income'?incomeCategories:expenseCategories;
+Object.keys(src).forEach(n=>{
+const d=document.createElement('div');d.className='cat';d.style.background=src[n];d.innerText=n;
+d.onclick=()=>{document.querySelectorAll('.cat').forEach(x=>x.classList.remove('active'));d.classList.add('active');currentCategory={name:n,color:src[n]}};
+c.appendChild(d);
+});
+document.getElementById('addModal').style.display='flex';
 }
 
-function openAdd(type) {
-  currentType = type; currentCategory = null;
-  document.getElementById('addTitle').innerText = type==='income'?'Добавить доход':'Добавить расход';
-  document.getElementById('amountInput').value=''; document.getElementById('commentInput').value='';
+function closeAdd(){document.getElementById('addModal').style.display='none'}
+function openMenu(){document.getElementById('menuModal').style.display='flex'}
+function closeMenu(){document.getElementById('menuModal').style.display='none'}
 
-  const catsDiv = document.getElementById('cats'); catsDiv.innerHTML='';
-  const cats = type==='income'?incomeCategories:expenseCategories;
-
-  Object.keys(cats).forEach(name=>{
-    const div=document.createElement('div'); div.className='cat'; div.style.background=cats[name]; div.innerText=name;
-    div.onclick=()=>{ currentCategory={name,color:cats[name]}; highlight(div); };
-    catsDiv.appendChild(div);
-  });
-
-  document.getElementById('addModal').style.display='flex';
+function saveOperation(){
+const a=parseFloat(document.getElementById('amountInput').value);
+if(!a||!currentCategory)return;
+currentType==='income'?balance+=a:balance-=a;
+operations.unshift({type:currentType,amount:a.toFixed(2),category:currentCategory.name,color:currentCategory.color});
+save();closeAdd();render();
 }
 
-function highlight(selected) {
-  document.querySelectorAll('.cat').forEach(c=>c.style.opacity='0.5');
-  selected.style.opacity='1';
+function del(i){
+const o=operations[i];
+o.type==='income'?balance-=parseFloat(o.amount):balance+=parseFloat(o.amount);
+operations.splice(i,1);save();render();
 }
 
-function saveOperation() {
-  const amount=parseFloat(document.getElementById('amountInput').value);
-  const comment=document.getElementById('commentInput').value.trim();
-  if(isNaN(amount)||amount<=0){alert('Введите корректную сумму');return;}
-  if(!currentCategory){alert('Выберите категорию');return;}
-
-  if(currentType==='income') balance+=amount; else balance-=amount;
-
-  operations.unshift({ type:currentType, amount:amount.toFixed(2), category:currentCategory.name, color:currentCategory.color, comment });
-  saveData(); closeAdd(); render();
-}
-
-function closeAdd(){ document.getElementById('addModal').style.display='none'; }
-
-function deleteOperation(index){
-  const op=operations[index];
-  if(op.type==='income') balance-=parseFloat(op.amount); else balance+=parseFloat(op.amount);
-  operations.splice(index,1); saveData(); render();
-}
-
-function openMenu(){ document.getElementById('menuModal').style.display='flex'; }
-function closeMenu(){ document.getElementById('menuModal').style.display='none'; }
-
-function clearAll(){ if(!confirm('Точно удалить все данные?')) return; balance=0; operations=[]; saveData(); closeMenu(); render(); }
-
-function openCategories(){ closeMenu(); renderCategories(); document.getElementById('categoriesModal').style.display='flex'; }
-function closeCategories(){ document.getElementById('categoriesModal').style.display='none'; }
-
-function setCatType(type){ currentCatType=type; renderCategories(); }
-
-function renderCategories(){
-  const list=document.getElementById('categoriesList'); list.innerHTML='';
-  const cats=currentCatType==='expense'?expenseCategories:incomeCategories;
-
-  Object.keys(cats).forEach(name=>{
-    const row=document.createElement('div'); row.className='cat-row';
-    const left=document.createElement('div'); left.className='cat-left'; 
-    const dot=document.createElement('div'); dot.className='dot'; dot.style.background=cats[name];
-    const title=document.createElement('div'); title.innerText=name;
-    left.appendChild(dot); left.appendChild(title);
-
-    const actions=document.createElement('div');
-    const edit=document.createElement('span'); edit.className='edit'; edit.innerText='✏️'; edit.onclick=()=>openCategoryForm(name);
-    const trash=document.createElement('span'); trash.className='trash'; trash.innerText='🗑'; trash.onclick=()=>deleteCategory(name);
-    actions.appendChild(edit); actions.appendChild(trash);
-
-    row.appendChild(left); row.appendChild(actions); list.appendChild(row);
-  });
-}
-
-function openCategoryForm(name=null){
-  editingCategoryName=name;
-  document.getElementById('catFormTitle').innerText=name?'Редактировать категорию':'Добавить категорию';
-  document.getElementById('catNameInput').value=name||'';
-  const cats=currentCatType==='expense'?expenseCategories:incomeCategories;
-  document.getElementById('catColorInput').value=name?cats[name]:'#999999';
-  document.getElementById('categoryFormModal').style.display='flex';
-}
-
-function closeCategoryForm(){ document.getElementById('categoryFormModal').style.display='none'; }
-
-function saveCategory(){
-  const name=document.getElementById('catNameInput').value.trim();
-  const color=document.getElementById('catColorInput').value;
-  if(!name){alert('Введите имя категории');return;}
-  const cats=currentCatType==='expense'?expenseCategories:incomeCategories;
-
-  if(editingCategoryName && editingCategoryName!==name){
-    cats[name]=color; delete cats[editingCategoryName];
-    operations.forEach(op=>{ if(op.category===editingCategoryName) op.category=name; });
-  } else {
-    cats[name]=color;
-  }
-
-  saveData(); closeCategoryForm(); renderCategories(); render();
-}
-
-function deleteCategory(name){
-  if(!confirm('Удалить категорию «'+name+'»?')) return;
-  const cats=currentCatType==='expense'?expenseCategories:incomeCategories;
-  delete cats[name];
-  operations.forEach(op=>{ if(op.category===name){ op.category='(удалена)'; op.color='#999'; } });
-  saveData(); renderCategories(); render();
+function clearAll(){
+if(!confirm('Удалить все данные?'))return;
+balance=0;operations=[];save();closeMenu();render();
 }
 
 render();
 </script>
-
 </body>
 </html>
