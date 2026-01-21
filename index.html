@@ -6,79 +6,48 @@
 <title>True Money</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
-:root{
---bg:#f6f7f9;--card:#ffffff;--text:#1f2933;--muted:#6b7280;
---income:#7fb69c;--expense:#e3a6a1;
-}
+:root{--bg:#f4f5f7;--card:#fff;--text:#1f2933;--muted:#8b8f97;--green:#6fae8e;--red:#d38c87;--shadow:0 6px 20px rgba(0,0,0,.05)}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{
-margin:0;padding:14px;
-font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,Helvetica,Arial,sans-serif;
-background:var(--bg);color:var(--text)
-}
-.top{display:flex;justify-content:flex-end;margin-bottom:10px}
-.menu{font-size:22px;color:var(--muted)}
-.balance{
-background:var(--card);border-radius:16px;padding:18px;
-text-align:center;font-size:28px;font-weight:600;margin-bottom:16px;
-box-shadow:0 4px 14px rgba(0,0,0,.04)
-}
-.buttons{display:flex;gap:12px;margin-bottom:16px}
-button{
-padding:14px;font-size:15px;border:none;border-radius:14px;
-width:100%;font-weight:500
-}
-.income{background:var(--income);color:#fff}
-.expense{background:var(--expense);color:#fff}
-.history{
-background:var(--card);border-radius:16px;padding:12px;
-box-shadow:0 4px 14px rgba(0,0,0,.04)
-}
-.item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #ececec}
+body{margin:0;padding:12px 12px 70px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text)}
+.balance{background:var(--card);border-radius:18px;padding:16px;font-size:26px;font-weight:600;box-shadow:var(--shadow);text-align:center}
+.buttons{display:flex;gap:12px;margin:14px 0}
+.action{flex:1;padding:14px;border-radius:16px;border:none;font-size:15px;font-weight:500;color:#fff}
+.income{background:var(--green)}.expense{background:var(--red)}
+.history{background:var(--card);border-radius:18px;padding:12px;box-shadow:var(--shadow)}
+.item{display:grid;grid-template-columns:1fr auto auto;gap:10px;padding:10px 0;border-bottom:1px solid #eee;align-items:center}
 .item:last-child{border-bottom:none}
 .row{display:flex;align-items:center;gap:8px}
 .dot{width:10px;height:10px;border-radius:50%}
-.plus{color:#3f8f6b}.minus{color:#b25550}
-.delete{color:#bbb;font-size:18px;padding-left:10px}
-.overlay{
-position:fixed;inset:0;background:rgba(0,0,0,.35);
-display:none;justify-content:center;align-items:center;z-index:10
-}
-.modal{
-background:var(--card);border-radius:18px;padding:16px;width:92%;max-width:420px
-}
-input,textarea{
-width:100%;padding:12px;border-radius:12px;border:1px solid #ddd;
-margin-top:10px;font-size:15px;font-family:inherit
-}
-.cats{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
-.cat{padding:8px 14px;border-radius:20px;color:#fff;font-size:13px;opacity:.6}
+.amount{min-width:90px;text-align:right;font-weight:500}
+.plus{color:var(--green)}.minus{color:var(--red)}
+.edit{font-size:18px;color:#aaa}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;justify-content:center;align-items:center;z-index:20}
+.modal{background:var(--card);border-radius:20px;padding:16px;width:92%;max-width:420px;box-shadow:var(--shadow)}
+input,textarea{width:100%;padding:12px;border-radius:14px;border:1px solid #ddd;font-size:15px;margin-top:10px;font-family:inherit}
+.cats{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+.cat{padding:8px 16px;border-radius:20px;font-size:13px;color:#fff;opacity:.5}
 .cat.active{opacity:1}
+.bottom{position:fixed;left:0;right:0;bottom:0;height:56px;background:var(--card);display:flex;justify-content:space-around;align-items:center;box-shadow:0 -4px 12px rgba(0,0,0,.05)}
+.tab{font-size:12px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:4px}
+.menu{font-size:22px;color:var(--muted)}
 </style>
 </head>
 <body>
 
-<div class="top"><div class="menu" onclick="openMenu()">⋮</div></div>
 <div class="balance">Баланс: <span id="balance">0</span> ₽</div>
 
 <div class="buttons">
-<button class="income" onclick="openAdd('income')">Доход</button>
-<button class="expense" onclick="openAdd('expense')">Расход</button>
+<button class="action income" onclick="openAdd('income')">Доход</button>
+<button class="action expense" onclick="openAdd('expense')">Расход</button>
 </div>
 
-<div class="history" id="history"><strong>История операций</strong></div>
-
-<div class="overlay" id="menuModal">
-<div class="modal">
-<button onclick="clearAll()">Удалить все данные</button>
-<button onclick="closeMenu()">Отмена</button>
-</div>
-</div>
+<div class="history" id="history"></div>
 
 <div class="overlay" id="addModal">
 <div class="modal">
 <h3 id="addTitle"></h3>
 <input id="amountInput" type="number" placeholder="Сумма">
+<input id="dateInput" type="date">
 <textarea id="commentInput" placeholder="Комментарий (необязательно)"></textarea>
 <div class="cats" id="cats"></div>
 <button onclick="saveOperation()">Сохранить</button>
@@ -86,10 +55,16 @@ margin-top:10px;font-size:15px;font-family:inherit
 </div>
 </div>
 
+<div class="bottom">
+<div class="tab">📄<div>История</div></div>
+<div class="tab">📊<div>Статистика</div></div>
+<div class="menu">⋮</div>
+</div>
+
 <script>
-const expenseCategories={'Еда':'#f0b8b4','Здоровье':'#e7b0c9','Дом':'#b8c6e6'};
-const incomeCategories={'Заработная плата':'#9ac7b3','Подарки':'#8fc4d6'};
-let balance=parseFloat(localStorage.getItem('balance'))||0;
+const expenseCats={Еда:'#e3a6a1',Здоровье:'#d6a5c8',Дом:'#b7c4e0'};
+const incomeCats={'Заработная плата':'#8fc4aa','Подарки':'#87b9cf'};
+let balance=+localStorage.getItem('balance')||0;
 let operations=JSON.parse(localStorage.getItem('operations'))||[];
 let currentType=null,currentCategory=null;
 
@@ -97,51 +72,46 @@ function save(){localStorage.setItem('balance',balance);localStorage.setItem('op
 
 function render(){
 document.getElementById('balance').innerText=balance.toFixed(2);
-const h=document.getElementById('history');
-h.innerHTML='<strong>История операций</strong>';
+const h=document.getElementById('history');h.innerHTML='';
+operations.sort((a,b)=>new Date(b.date)-new Date(a.date));
 operations.forEach((o,i)=>{
 const d=document.createElement('div');d.className='item';
 d.innerHTML=`<div class="row"><div class="dot" style="background:${o.color}"></div>${o.category}</div>
-<div class="${o.type==='income'?'plus':'minus'}">${o.type==='income'?'+':'-'}${o.amount} ₽</div>
-<div class="delete" onclick="del(${i})">✕</div>`;
+<div class="amount ${o.type==='income'?'plus':'minus'}">${o.type==='income'?'+':'-'}${o.amount} ₽</div>
+<div class="edit" onclick="remove(${i})">✎</div>`;
 h.appendChild(d);
-})
+});
 }
 
 function openAdd(t){
 currentType=t;currentCategory=null;
-document.getElementById('addTitle').innerText=t==='income'?'Добавить доход':'Добавить расход';
-const c=document.getElementById('cats');c.innerHTML='';
-const src=t==='income'?incomeCategories:expenseCategories;
+amountInput.value='';commentInput.value='';
+dateInput.value=new Date().toISOString().slice(0,10);
+addTitle.innerText=t==='income'?'Добавить доход':'Добавить расход';
+cats.innerHTML='';
+const src=t==='income'?incomeCats:expenseCats;
 Object.keys(src).forEach(n=>{
-const d=document.createElement('div');d.className='cat';d.style.background=src[n];d.innerText=n;
-d.onclick=()=>{document.querySelectorAll('.cat').forEach(x=>x.classList.remove('active'));d.classList.add('active');currentCategory={name:n,color:src[n]}};
-c.appendChild(d);
+const c=document.createElement('div');c.className='cat';c.style.background=src[n];c.innerText=n;
+c.onclick=()=>{document.querySelectorAll('.cat').forEach(x=>x.classList.remove('active'));c.classList.add('active');currentCategory={name:n,color:src[n]}};
+cats.appendChild(c);
 });
-document.getElementById('addModal').style.display='flex';
+addModal.style.display='flex';
 }
 
-function closeAdd(){document.getElementById('addModal').style.display='none'}
-function openMenu(){document.getElementById('menuModal').style.display='flex'}
-function closeMenu(){document.getElementById('menuModal').style.display='none'}
+function closeAdd(){addModal.style.display='none'}
 
 function saveOperation(){
-const a=parseFloat(document.getElementById('amountInput').value);
+const a=+amountInput.value;
 if(!a||!currentCategory)return;
 currentType==='income'?balance+=a:balance-=a;
-operations.unshift({type:currentType,amount:a.toFixed(2),category:currentCategory.name,color:currentCategory.color});
+operations.push({type:currentType,amount:a.toFixed(2),category:currentCategory.name,color:currentCategory.color,date:dateInput.value});
 save();closeAdd();render();
 }
 
-function del(i){
+function remove(i){
 const o=operations[i];
-o.type==='income'?balance-=parseFloat(o.amount):balance+=parseFloat(o.amount);
+o.type==='income'?balance-=+o.amount:balance+=+o.amount;
 operations.splice(i,1);save();render();
-}
-
-function clearAll(){
-if(!confirm('Удалить все данные?'))return;
-balance=0;operations=[];save();closeMenu();render();
 }
 
 render();
