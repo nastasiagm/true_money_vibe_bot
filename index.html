@@ -4,116 +4,198 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>True Money</title>
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
-:root{--bg:#f4f5f7;--card:#fff;--text:#1f2933;--muted:#8b8f97;--green:#6fae8e;--red:#d38c87;--shadow:0 6px 20px rgba(0,0,0,.05)}
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{margin:0;padding:12px 12px 70px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text)}
-.balance{background:var(--card);border-radius:18px;padding:16px;font-size:26px;font-weight:600;box-shadow:var(--shadow);text-align:center}
-.buttons{display:flex;gap:12px;margin:14px 0}
-.action{flex:1;padding:14px;border-radius:16px;border:none;font-size:15px;font-weight:500;color:#fff}
-.income{background:var(--green)}.expense{background:var(--red)}
-.history{background:var(--card);border-radius:18px;padding:12px;box-shadow:var(--shadow)}
-.item{display:grid;grid-template-columns:1fr auto auto;gap:10px;padding:10px 0;border-bottom:1px solid #eee;align-items:center}
-.item:last-child{border-bottom:none}
-.row{display:flex;align-items:center;gap:8px}
-.dot{width:10px;height:10px;border-radius:50%}
-.amount{min-width:90px;text-align:right;font-weight:500}
-.plus{color:var(--green)}.minus{color:var(--red)}
-.edit{font-size:18px;color:#aaa}
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;justify-content:center;align-items:center;z-index:20}
-.modal{background:var(--card);border-radius:20px;padding:16px;width:92%;max-width:420px;box-shadow:var(--shadow)}
-input,textarea{width:100%;padding:12px;border-radius:14px;border:1px solid #ddd;font-size:15px;margin-top:10px;font-family:inherit}
-.cats{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
-.cat{padding:8px 16px;border-radius:20px;font-size:13px;color:#fff;opacity:.5}
-.cat.active{opacity:1}
-.bottom{position:fixed;left:0;right:0;bottom:0;height:56px;background:var(--card);display:flex;justify-content:space-around;align-items:center;box-shadow:0 -4px 12px rgba(0,0,0,.05)}
-.tab{font-size:12px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:4px}
-.menu{font-size:22px;color:var(--muted)}
+:root{
+--bg:#f4f5f7;--card:#ffffff;--text:#1f2933;--muted:#8b8f97;
+--green:#6fae8e;--red:#d38c87;--danger:#c94a44;
+--shadow:0 6px 20px rgba(0,0,0,.06)
+}
+*{box-sizing:border-box}
+body{
+margin:0;padding:12px 12px 90px;
+font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,Helvetica,Arial,sans-serif;
+background:var(--bg);color:var(--text)
+}
+.header{
+display:flex;align-items:center;justify-content:space-between;
+margin-bottom:12px
+}
+.title{font-size:20px;font-weight:600}
+.back{font-size:18px;color:var(--muted)}
+.switch{
+display:flex;background:var(--card);border-radius:16px;
+box-shadow:var(--shadow);overflow:hidden;margin-bottom:14px
+}
+.switch button{
+flex:1;padding:12px;border:none;font-weight:600;
+background:none;color:var(--muted)
+}
+.switch button.active{background:#eef1f5;color:var(--text)}
+.list{
+background:var(--card);border-radius:18px;
+box-shadow:var(--shadow);padding:12px
+}
+.cat-item{
+display:flex;align-items:center;justify-content:space-between;
+padding:12px 0;border-bottom:1px solid #eee
+}
+.cat-item:last-child{border-bottom:none}
+.left{display:flex;align-items:center;gap:10px}
+.dot{width:14px;height:14px;border-radius:50%}
+.edit{color:#9aa0a6}
+.add{
+margin-top:14px;padding:14px;
+border-radius:18px;border:none;
+background:#e5e7eb;font-weight:600
+}
+.modal{
+position:fixed;inset:0;background:rgba(0,0,0,.35);
+display:none;justify-content:center;align-items:center
+}
+.modal-box{
+background:var(--card);border-radius:22px;
+padding:18px;width:92%;max-width:420px
+}
+input{
+width:100%;padding:14px;border-radius:16px;
+border:1px solid #ddd;font-size:16px;margin-top:10px
+}
+.colors{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.color{
+width:34px;height:34px;border-radius:50%;
+border:2px solid transparent
+}
+.color.active{border-color:#000}
+.actions{
+margin-top:18px;display:flex;flex-direction:column;
+align-items:center;gap:12px
+}
+.actions button{
+width:100%;max-width:260px;padding:14px;
+border-radius:20px;border:none;font-weight:600
+}
+.save{background:var(--green);color:#fff}
+.delete{background:var(--danger);color:#fff}
+.cancel{background:#e5e7eb}
 </style>
 </head>
 <body>
 
-<div class="balance">Баланс: <span id="balance">0</span> ₽</div>
-
-<div class="buttons">
-<button class="action income" onclick="openAdd('income')">Доход</button>
-<button class="action expense" onclick="openAdd('expense')">Расход</button>
+<div class="header">
+<div class="back" onclick="goBack()">←</div>
+<div class="title">Категории</div>
+<div></div>
 </div>
 
-<div class="history" id="history"></div>
-
-<div class="overlay" id="addModal">
-<div class="modal">
-<h3 id="addTitle"></h3>
-<input id="amountInput" type="number" placeholder="Сумма">
-<input id="dateInput" type="date">
-<textarea id="commentInput" placeholder="Комментарий (необязательно)"></textarea>
-<div class="cats" id="cats"></div>
-<button onclick="saveOperation()">Сохранить</button>
-<button onclick="closeAdd()">Отмена</button>
-</div>
+<div class="switch">
+<button id="expBtn" class="active" onclick="switchType('expense')">Расходы</button>
+<button id="incBtn" onclick="switchType('income')">Доходы</button>
 </div>
 
-<div class="bottom">
-<div class="tab">📄<div>История</div></div>
-<div class="tab">📊<div>Статистика</div></div>
-<div class="menu">⋮</div>
+<div class="list" id="list"></div>
+<button class="add" onclick="openNew()">＋ Добавить категорию</button>
+
+<div class="modal" id="modal">
+<div class="modal-box">
+<h3 id="modalTitle"></h3>
+<input id="name" placeholder="Название категории">
+<div class="colors" id="colors"></div>
+<div class="actions">
+<button class="save" onclick="saveCat()">Сохранить</button>
+<button class="delete" id="delBtn" onclick="deleteCat()">Удалить</button>
+<button class="cancel" onclick="closeModal()">Отмена</button>
+</div>
+</div>
 </div>
 
 <script>
-const expenseCats={Еда:'#e3a6a1',Здоровье:'#d6a5c8',Дом:'#b7c4e0'};
-const incomeCats={'Заработная плата':'#8fc4aa','Подарки':'#87b9cf'};
-let balance=+localStorage.getItem('balance')||0;
-let operations=JSON.parse(localStorage.getItem('operations'))||[];
-let currentType=null,currentCategory=null;
+const palette=['#e3a6a1','#d6a5c8','#b7c4e0','#8fc4aa','#87b9cf','#f2c48d','#c3b1e1'];
+let categories=JSON.parse(localStorage.getItem('categories'))||{
+expense:[
+{id:'food',name:'Еда',color:'#e3a6a1',base:true},
+{id:'health',name:'Здоровье',color:'#d6a5c8',base:true},
+{id:'home',name:'Дом',color:'#b7c4e0',base:true}
+],
+income:[
+{id:'salary',name:'Заработная плата',color:'#8fc4aa',base:true},
+{id:'gifts',name:'Подарки',color:'#87b9cf',base:true}
+]
+};
+let currentType='expense',editId=null,chosenColor=null;
 
-function save(){localStorage.setItem('balance',balance);localStorage.setItem('operations',JSON.stringify(operations))}
+function save(){localStorage.setItem('categories',JSON.stringify(categories))}
 
 function render(){
-document.getElementById('balance').innerText=balance.toFixed(2);
-const h=document.getElementById('history');h.innerHTML='';
-operations.sort((a,b)=>new Date(b.date)-new Date(a.date));
-operations.forEach((o,i)=>{
-const d=document.createElement('div');d.className='item';
-d.innerHTML=`<div class="row"><div class="dot" style="background:${o.color}"></div>${o.category}</div>
-<div class="amount ${o.type==='income'?'plus':'minus'}">${o.type==='income'?'+':'-'}${o.amount} ₽</div>
-<div class="edit" onclick="remove(${i})">✎</div>`;
-h.appendChild(d);
+const l=document.getElementById('list');l.innerHTML='';
+categories[currentType].forEach(c=>{
+const d=document.createElement('div');
+d.className='cat-item';
+d.innerHTML=`<div class="left">
+<div class="dot" style="background:${c.color}"></div>${c.name}
+</div>
+<div class="edit" onclick="editCat('${c.id}')">✏️</div>`;
+l.appendChild(d);
 });
 }
 
-function openAdd(t){
-currentType=t;currentCategory=null;
-amountInput.value='';commentInput.value='';
-dateInput.value=new Date().toISOString().slice(0,10);
-addTitle.innerText=t==='income'?'Добавить доход':'Добавить расход';
-cats.innerHTML='';
-const src=t==='income'?incomeCats:expenseCats;
-Object.keys(src).forEach(n=>{
-const c=document.createElement('div');c.className='cat';c.style.background=src[n];c.innerText=n;
-c.onclick=()=>{document.querySelectorAll('.cat').forEach(x=>x.classList.remove('active'));c.classList.add('active');currentCategory={name:n,color:src[n]}};
-cats.appendChild(c);
+function switchType(t){
+currentType=t;
+expBtn.classList.toggle('active',t==='expense');
+incBtn.classList.toggle('active',t==='income');
+render();
+}
+
+function openNew(){
+editId=null;name.value='';chosenColor=palette[0];
+modalTitle.innerText='Новая категория';
+delBtn.style.display='none';
+renderColors();
+modal.style.display='flex';
+}
+
+function editCat(id){
+const c=categories[currentType].find(x=>x.id===id);
+editId=id;name.value=c.name;chosenColor=c.color;
+modalTitle.innerText='Редактировать категорию';
+delBtn.style.display=c.base?'none':'block';
+renderColors();
+modal.style.display='flex';
+}
+
+function renderColors(){
+colors.innerHTML='';
+palette.forEach(p=>{
+const d=document.createElement('div');
+d.className='color'+(p===chosenColor?' active':'');
+d.style.background=p;
+d.onclick=()=>{chosenColor=p;renderColors()};
+colors.appendChild(d);
 });
-addModal.style.display='flex';
 }
 
-function closeAdd(){addModal.style.display='none'}
-
-function saveOperation(){
-const a=+amountInput.value;
-if(!a||!currentCategory)return;
-currentType==='income'?balance+=a:balance-=a;
-operations.push({type:currentType,amount:a.toFixed(2),category:currentCategory.name,color:currentCategory.color,date:dateInput.value});
-save();closeAdd();render();
+function saveCat(){
+if(!name.value.trim())return;
+if(editId){
+const c=categories[currentType].find(x=>x.id===editId);
+c.name=name.value;c.color=chosenColor;
+}else{
+categories[currentType].push({
+id:'cat'+Date.now(),
+name:name.value,
+color:chosenColor,
+base:false
+});
+}
+save();closeModal();render();
 }
 
-function remove(i){
-const o=operations[i];
-o.type==='income'?balance-=+o.amount:balance+=+o.amount;
-operations.splice(i,1);save();render();
+function deleteCat(){
+categories[currentType]=categories[currentType].filter(c=>c.id!==editId);
+save();closeModal();render();
 }
 
+function closeModal(){modal.style.display='none'}
+function goBack(){history.back()}
 render();
 </script>
 </body>
